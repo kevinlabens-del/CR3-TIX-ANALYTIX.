@@ -1,0 +1,10 @@
+{
+  "name": "CR3@TIX ANALYTIX",
+  "short_name": "ANALYTIX",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050610",
+  "theme_color": "#050610",
+  "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
