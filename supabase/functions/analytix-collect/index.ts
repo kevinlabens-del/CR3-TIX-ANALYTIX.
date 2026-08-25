@@ -44,7 +44,8 @@ Deno.serve(async req=>{
   for(const item of body.events){
     if(!item||typeof item!=='object'||!EVENT.test(String(item.type||'')))return json({error:'invalid_event'},400,origin);
     const props=cleanObject(item.properties); if(encoder.encode(JSON.stringify(props)).byteLength>4096)return json({error:'properties_too_large'},413,origin);
-    events.push({id:UUID.test(item.id||'')?item.id:crypto.randomUUID(),type:String(item.type),timestamp:cleanText(item.timestamp,40),path:cleanPath(item.path),title:cleanText(item.title,300),properties:props});
+    const parsedTime=new Date(String(item.timestamp||''));
+    events.push({id:UUID.test(item.id||'')?item.id:crypto.randomUUID(),type:String(item.type),timestamp:Number.isNaN(parsedTime.getTime())?new Date().toISOString():parsedTime.toISOString(),path:cleanPath(item.path),title:cleanText(item.title,300),properties:props});
   }
   const c=body.context||{};
   const context={page_path:cleanPath(c.page_path),referrer:cleanText(c.referrer,500),source:cleanText(c.source,120),medium:cleanText(c.medium,120),utm_source:cleanText(c.utm_source,120),utm_medium:cleanText(c.utm_medium,120),utm_campaign:cleanText(c.utm_campaign,160),utm_content:cleanText(c.utm_content,160),utm_term:cleanText(c.utm_term,160),device_type:cleanText(c.device_type,40),browser:cleanText(c.browser,80),os:cleanText(c.os,80)};
