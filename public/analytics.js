@@ -1,4 +1,4 @@
-/* CR3@TIX ANALYTIX tracker v1.0.0 — privacy-first, dependency-free, fail-safe */
+/* CR3@TIX ANALYTIX tracker v1.0.1 — privacy-first, dependency-free, fail-safe */
 (function(w,d){
   'use strict';
   try{
@@ -26,7 +26,7 @@
     }
     function pageview(){var p=path();if(p===lastPath)return;lastPath=p;track('pageview',baseProps());}
     function engagement(){if(engaged>0){track('engagement',{seconds:Math.min(engaged,300)});engaged=0;}}
-    w.CreatixAnalytics={track:track,flush:flush,optOut:function(){try{localStorage.setItem('cr3atix_analytics_optout','1');}catch(e){}disabled=true;queue=[];},optIn:function(){try{localStorage.removeItem('cr3atix_analytics_optout');}catch(e){}location.reload();},version:'1.0.0'};
+    w.CreatixAnalytics={track:track,flush:flush,optOut:function(){try{localStorage.setItem('cr3atix_analytics_optout','1');}catch(e){}disabled=true;queue=[];},optIn:function(){try{localStorage.removeItem('cr3atix_analytics_optout');}catch(e){}location.reload();},version:'1.0.1'};
     if(disabled)return;
     track('session_start',baseProps());pageview();
     var originalPush=history.pushState,originalReplace=history.replaceState;history.pushState=function(){originalPush.apply(this,arguments);setTimeout(pageview,0);};history.replaceState=function(){originalReplace.apply(this,arguments);setTimeout(pageview,0);};addEventListener('popstate',pageview);
@@ -42,6 +42,6 @@
     try{new PerformanceObserver(function(list){list.getEntries().forEach(function(x){var v=x.duration;vital('INP',v,v<=200?'good':v<=500?'needs-improvement':'poor');});}).observe({type:'event',buffered:true,durationThreshold:40});}catch(e){}
     try{var cls=0;new PerformanceObserver(function(list){list.getEntries().forEach(function(x){if(!x.hadRecentInput)cls+=x.value;});vital('CLS',cls,cls<=.1?'good':cls<=.25?'needs-improvement':'poor');}).observe({type:'layout-shift',buffered:true});}catch(e){}
     addEventListener('load',function(){setTimeout(function(){var nav=performance.getEntriesByType('navigation')[0];if(nav){vital('TTFB',nav.responseStart,nav.responseStart<=800?'good':nav.responseStart<=1800?'needs-improvement':'poor');vital('LOAD',nav.loadEventEnd,nav.loadEventEnd<=2500?'good':nav.loadEventEnd<=4000?'needs-improvement':'poor');}},0);});
-    setInterval(function(){if(!d.hidden&&visibleAt){engaged+=30;visibleAt=Date.now();track('game_time',{seconds:30});}flush();},30000);setInterval(flush,3000);
+    setInterval(function(){if(!d.hidden&&visibleAt){engaged+=Math.round((Date.now()-visibleAt)/1000);visibleAt=Date.now();engagement();}flush();},60000);setInterval(flush,3000);
   }catch(fatal){/* Analytics must never break the host project. */}
 })(window,document);
