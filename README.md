@@ -17,6 +17,7 @@ Plateforme personnelle de Web Analytics, erreurs, Web Vitals et monitoring de sa
 - Aucune IP brute, aucun nom, aucun e-mail visiteur et aucun fingerprinting invasif ne sont stockés.
 - Les événements bruts sont purgés après 45 jours, les statistiques agrégées restent disponibles.
 - La vue LIVE interroge le backend toutes les 15 secondes pour économiser Realtime sur le plan gratuit.
+- Le heartbeat d’engagement est limité à un envoi par minute ; `game_time` reste un événement de jeu explicite.
 
 ## Commandes locales
 
