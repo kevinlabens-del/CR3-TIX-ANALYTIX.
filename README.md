@@ -2,6 +2,11 @@
 
 Plateforme personnelle de Web Analytics, erreurs, Web Vitals et monitoring de santé reliée au projet Supabase existant **CR3ATIX-MAP**.
 
+## Application publiée
+
+- Dashboard : https://kevinlabens-del.github.io/CR3-TIX-ANALYTIX./
+- Dépôt : https://github.com/kevinlabens-del/CR3-TIX-ANALYTIX.
+
 ## Architecture
 
 `Projet → analytics.js → analytix-collect → validation → CR3ATIX-MAP`
