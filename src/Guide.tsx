@@ -1,4 +1,5 @@
-import { BookOpen, Activity, BarChart3, Gamepad2, Globe2, HeartPulse, MousePointerClick, ShieldCheck, Smartphone, Timer, Users, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BookOpen, Activity, BarChart3, Gamepad2, Globe2, HeartPulse, MousePointerClick, ShieldCheck, Smartphone, Timer, Users, X, Zap } from 'lucide-react';
 
 const sections = [
   {title:'Bienvenue dans CR3@TIX ANALYTIX', icon:BookOpen, body:'ANALYTIX centralise les statistiques de tes projets CR3@TIX. MAP fournit le registre des projets, analytics.js collecte les événements et Supabase stocke les données affichées dans ce cockpit privé.'},
@@ -15,18 +16,20 @@ const sections = [
   {title:'Routine simple à retenir', icon:Zap, body:'Chaque jour : regarde visiteurs, sessions, durée moyenne et classement. Après une publication : LIVE + Acquisition. Après une mise à jour : Erreurs + Performances + Santé. Pour un jeu : game_start, game_end, level_complete, score et game_time.'}
 ];
 
-export default function Guide(){
-  return <div className="guidePage">
-    <section className="guideHero">
-      <div className="guideHeroIcon"><BookOpen/></div>
-      <div><span className="eyebrow">MODE D’EMPLOI INTÉGRÉ</span><h2>Comment utiliser CR3@TIX ANALYTIX</h2><p>Un guide pratique directement dans l’application, pensé pour retrouver rapidement la signification des données et la bonne routine d’analyse.</p></div>
-    </section>
-    <div className="guideGrid">
-      {sections.map(({title,icon:Icon,body})=><article className="guideCard" key={title}><div className="guideCardIcon"><Icon/></div><div><h3>{title}</h3><p>{body}</p></div></article>)}
-    </div>
-    <section className="guideQuick">
-      <h3>Le principe en une phrase</h3>
-      <p><b>CR3@TIX MAP</b> dit quels projets existent, <b>analytics.js</b> observe ce que font les utilisateurs et <b>CR3@TIX ANALYTIX</b> transforme ces données en décisions utiles.</p>
-    </section>
-  </div>
+export default function GuideLauncher(){
+  const [open,setOpen]=useState(false);
+  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')setOpen(false)};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
+  return <>
+    <button className="guideLauncher" onClick={()=>setOpen(true)} aria-label="Ouvrir le mode d’emploi"><BookOpen/><span>Mode d’emploi</span></button>
+    {open&&<div className="guideOverlay" role="dialog" aria-modal="true" aria-label="Mode d’emploi CR3@TIX ANALYTIX" onMouseDown={e=>{if(e.target===e.currentTarget)setOpen(false)}}>
+      <div className="guideModal">
+        <button className="guideClose" onClick={()=>setOpen(false)} aria-label="Fermer le mode d’emploi"><X/></button>
+        <div className="guidePage">
+          <section className="guideHero"><div className="guideHeroIcon"><BookOpen/></div><div><span className="eyebrow">MODE D’EMPLOI INTÉGRÉ</span><h2>Comment utiliser CR3@TIX ANALYTIX</h2><p>Un guide pratique directement dans l’application pour comprendre les données, contrôler tes projets et retrouver la bonne routine d’analyse.</p></div></section>
+          <div className="guideGrid">{sections.map(({title,icon:Icon,body})=><article className="guideCard" key={title}><div className="guideCardIcon"><Icon/></div><div><h3>{title}</h3><p>{body}</p></div></article>)}</div>
+          <section className="guideQuick"><h3>Le principe en une phrase</h3><p><b>CR3@TIX MAP</b> dit quels projets existent, <b>analytics.js</b> observe ce que font les utilisateurs et <b>CR3@TIX ANALYTIX</b> transforme ces données en décisions utiles.</p></section>
+        </div>
+      </div>
+    </div>}
+  </>;
 }
