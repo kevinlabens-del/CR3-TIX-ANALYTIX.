@@ -6,6 +6,7 @@ Plateforme personnelle de Web Analytics, erreurs, Web Vitals et monitoring de sa
 
 - Dashboard : https://kevinlabens-del.github.io/CR3-TIX-ANALYTIX./
 - Dépôt : https://github.com/kevinlabens-del/CR3-TIX-ANALYTIX.
+- Version publiée : **1.0.1** (heartbeat d’engagement optimisé pour le plan gratuit)
 
 ## Architecture
 
