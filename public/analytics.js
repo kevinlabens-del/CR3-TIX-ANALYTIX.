@@ -1,7 +1,24 @@
-/* CR3@TIX ANALYTIX tracker v1.0.1 — privacy-first, dependency-free, fail-safe */
+/* CR3@TIX ANALYTIX tracker v1.0.2 — privacy-first, dependency-free, fail-safe */
 (function(w,d){
   'use strict';
   try{
+    var SUPPORT_TARGETS=[
+      'kevinlabens-del.github.io/breizh-balade/',
+      'kevinlabens-del.github.io/devis-lectrique/',
+      'kevinlabens-del.github.io/cr3-tix-learn-linux-/',
+      'kevinlabens-del.github.io/creatix-movies-/',
+      'kevinlabens-del.github.io/cr3atix-vigilance/'
+    ];
+    var supportLocation=(location.hostname+location.pathname).toLowerCase();
+    var shouldLoadSupport=SUPPORT_TARGETS.some(function(target){return supportLocation.indexOf(target)===0;});
+    if(shouldLoadSupport&&!d.querySelector('script[data-cr3atix-support-loader]')){
+      var supportScript=d.createElement('script');
+      supportScript.async=true;
+      supportScript.src='https://kevinlabens-del.github.io/creatix-project/soutien/support-button.js?v=1.0.0';
+      supportScript.setAttribute('data-cr3atix-support-loader','1');
+      (d.head||d.documentElement).appendChild(supportScript);
+    }
+
     var script=d.currentScript||d.querySelector('script[data-project-id][data-project-key]');
     var PROJECT=script&&script.getAttribute('data-project-id'),KEY=script&&script.getAttribute('data-project-key');
     var ENDPOINT=(script&&script.getAttribute('data-endpoint'))||'https://gwqojqwcbwoulxrctaqz.supabase.co/functions/v1/analytix-collect';
@@ -26,7 +43,7 @@
     }
     function pageview(){var p=path();if(p===lastPath)return;lastPath=p;track('pageview',baseProps());}
     function engagement(){if(engaged>0){track('engagement',{seconds:Math.min(engaged,300)});engaged=0;}}
-    w.CreatixAnalytics={track:track,flush:flush,optOut:function(){try{localStorage.setItem('cr3atix_analytics_optout','1');}catch(e){}disabled=true;queue=[];},optIn:function(){try{localStorage.removeItem('cr3atix_analytics_optout');}catch(e){}location.reload();},version:'1.0.1'};
+    w.CreatixAnalytics={track:track,flush:flush,optOut:function(){try{localStorage.setItem('cr3atix_analytics_optout','1');}catch(e){}disabled=true;queue=[];},optIn:function(){try{localStorage.removeItem('cr3atix_analytics_optout');}catch(e){}location.reload();},version:'1.0.2'};
     if(disabled)return;
     track('session_start',baseProps());pageview();
     var originalPush=history.pushState,originalReplace=history.replaceState;history.pushState=function(){originalPush.apply(this,arguments);setTimeout(pageview,0);};history.replaceState=function(){originalReplace.apply(this,arguments);setTimeout(pageview,0);};addEventListener('popstate',pageview);
