@@ -66,6 +66,7 @@ async function resolveCountry(req:Request,hash:string){
     if(!res.ok)return null;
     const body=await res.json();const cc=String(body?.country_code||'').trim().toUpperCase();
     if(body?.success!==true||!COUNTRY.test(cc)||cc==='XX')return null;
+    await admin.from('analytics_geo_cache').delete().lt('expires_at',now.toISOString());
     await admin.from('analytics_geo_cache').upsert({client_hash:hash,country_code:cc,expires_at:new Date(Date.now()+GEO_TTL_MS).toISOString(),updated_at:new Date().toISOString()},{onConflict:'client_hash'});
     return cc;
   }catch{return null;}
