@@ -6,6 +6,8 @@ const admin=createClient(SUPABASE_URL,SERVICE_KEY,{auth:{persistSession:false,au
 const encoder=new TextEncoder();
 const EVENT=/^[a-z][a-z0-9_]{0,63}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const COUNTRY=/^[A-Z]{2}$/;
+const GEO_TTL_MS=24*60*60*1000;
 
 function cors(origin:string){return {'access-control-allow-origin':origin,'access-control-allow-methods':'POST,OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','vary':'Origin'};}
 function json(body:unknown,status:number,origin:string){return new Response(JSON.stringify(body),{status,headers:{...cors(origin),'content-type':'application/json;charset=utf-8','cache-control':'no-store'}});}
@@ -25,6 +27,49 @@ function cleanObject(value:unknown,depth=0):Record<string,unknown>{
   return out;
 }
 async function sha(value:string){const data=await crypto.subtle.digest('SHA-256',encoder.encode(value));return [...new Uint8Array(data)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+function countryHeader(req:Request){
+  for(const h of ['cf-ipcountry','x-vercel-ip-country','x-country-code','x-client-country']){
+    const v=(req.headers.get(h)||'').trim().toUpperCase();
+    if(COUNTRY.test(v)&&v!=='XX')return v;
+  }
+  return null;
+}
+function clientIp(req:Request){
+  let raw=(req.headers.get('x-forwarded-for')||req.headers.get('x-real-ip')||'').split(',')[0].trim();
+  if(!raw)return null;
+  raw=raw.replace(/^"|"$/g,'');
+  const bracket=raw.match(/^\[([0-9a-f:]+)\](?::\d+)?$/i); if(bracket)raw=bracket[1];
+  const ipv4Port=raw.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$/); if(ipv4Port)raw=ipv4Port[1];
+  if(/^\d{1,3}(?:\.\d{1,3}){3}$/.test(raw)){
+    const p=raw.split('.').map(Number);if(p.some(x=>x<0||x>255))return null;
+    if(p[0]===10||p[0]===127||(p[0]===169&&p[1]===254)||(p[0]===172&&p[1]>=16&&p[1]<=31)||(p[0]===192&&p[1]===168))return null;
+    return raw;
+  }
+  if(/^[0-9a-f:]+$/i.test(raw)&&raw.includes(':')){
+    const l=raw.toLowerCase();if(l==='::1'||l.startsWith('fc')||l.startsWith('fd')||l.startsWith('fe80:'))return null;
+    return raw;
+  }
+  return null;
+}
+async function resolveCountry(req:Request,hash:string){
+  const fromHeader=countryHeader(req);if(fromHeader)return fromHeader;
+  const ip=clientIp(req);if(!ip)return null;
+  const now=new Date();
+  try{
+    const {data:cached}=await admin.from('analytics_geo_cache').select('country_code,expires_at').eq('client_hash',hash).gt('expires_at',now.toISOString()).maybeSingle();
+    const cc=String(cached?.country_code||'').toUpperCase();if(COUNTRY.test(cc))return cc;
+  }catch{/* La géolocalisation ne doit jamais bloquer la collecte. */}
+  try{
+    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),1800);
+    const res=await fetch(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country_code`,{signal:controller.signal,headers:{'accept':'application/json','user-agent':'CR3ATIX-ANALYTIX/1.1'}});
+    clearTimeout(timer);
+    if(!res.ok)return null;
+    const body=await res.json();const cc=String(body?.country_code||'').trim().toUpperCase();
+    if(body?.success!==true||!COUNTRY.test(cc)||cc==='XX')return null;
+    await admin.from('analytics_geo_cache').upsert({client_hash:hash,country_code:cc,expires_at:new Date(Date.now()+GEO_TTL_MS).toISOString(),updated_at:new Date().toISOString()},{onConflict:'client_hash'});
+    return cc;
+  }catch{return null;}
+}
 
 Deno.serve(async req=>{
   const origin=req.headers.get('origin')||'';
@@ -49,10 +94,13 @@ Deno.serve(async req=>{
   }
   const c=body.context||{};
   const context={page_path:cleanPath(c.page_path),referrer:cleanText(c.referrer,500),source:cleanText(c.source,120),medium:cleanText(c.medium,120),utm_source:cleanText(c.utm_source,120),utm_medium:cleanText(c.utm_medium,120),utm_campaign:cleanText(c.utm_campaign,160),utm_content:cleanText(c.utm_content,160),utm_term:cleanText(c.utm_term,160),device_type:cleanText(c.device_type,40),browser:cleanText(c.browser,80),os:cleanText(c.os,80)};
-  const forwarded=(req.headers.get('x-forwarded-for')||'0').split(',')[0].trim();
-  const day=new Date().toISOString().slice(0,10); const clientHash=await sha(`${day}|${project.id}|${forwarded}|cr3atix`);
-  const country=(req.headers.get('cf-ipcountry')||req.headers.get('x-vercel-ip-country')||'').toUpperCase().slice(0,2)||null;
+  const ip=clientIp(req)||'0';
+  const day=new Date().toISOString().slice(0,10); const clientHash=await sha(`${day}|${project.id}|${ip}|cr3atix`);
+  const country=await resolveCountry(req,clientHash);
   const {data,error}=await admin.rpc('analytics_ingest_batch',{p_project_id:project.id,p_visitor_id:body.visitor_id,p_session_id:body.session_id,p_events:events,p_context:context,p_client_hash:clientHash,p_country_code:country});
   if(error){console.error('ingest',error.code,error.message);const status=error.message.includes('rate_limited')?429:400;return json({error:status===429?'rate_limited':'rejected'},status,origin);}
+  if(country){
+    await admin.from('analytics_sessions').update({country_code:country}).eq('project_id',project.id).eq('session_id',body.session_id).is('country_code',null);
+  }
   return json(data,202,origin);
 });
