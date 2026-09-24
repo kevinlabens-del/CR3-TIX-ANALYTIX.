@@ -17,9 +17,13 @@ Deno.serve(async req=>{
     const {data,error}=await admin.from('analytics_alerts').update({status,resolved_at:status==='RESOLVED'?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq('id',body.id).select().single();return error?reply({error:error.message},400,origin):reply(data,200,origin);
   }
   if(action==='live'){
-    const since=new Date(Date.now()-5*60000).toISOString();
-    const [sessions,events]=await Promise.all([admin.from('analytics_sessions').select('project_id,session_id,visitor_id,last_seen_at,exit_page,device_type,country_code').gte('last_seen_at',since).order('last_seen_at',{ascending:false}).limit(200),admin.from('analytics_events').select('id,project_id,event_type,occurred_at,page_path,device_type,country_code').gte('occurred_at',since).order('occurred_at',{ascending:false}).limit(100)]);
-    return reply({sessions:sessions.data||[],events:events.data||[],generated_at:new Date().toISOString()},200,origin);
+    const sessionSince=new Date(Date.now()-5*60000).toISOString();
+    const eventSince=new Date(Date.now()-30*60000).toISOString();
+    const [sessions,events]=await Promise.all([
+      admin.from('analytics_sessions').select('project_id,session_id,visitor_id,last_seen_at,exit_page,device_type,country_code').gte('last_seen_at',sessionSince).order('last_seen_at',{ascending:false}).limit(200),
+      admin.from('analytics_events').select('id,project_id,event_type,occurred_at,page_path,device_type,country_code').gte('occurred_at',eventSince).order('occurred_at',{ascending:false}).limit(100)
+    ]);
+    return reply({sessions:sessions.data||[],events:events.data||[],generated_at:new Date().toISOString(),session_window_minutes:5,event_window_minutes:30},200,origin);
   }
   const projectId=body.project_id&&/^[0-9a-f-]{36}$/i.test(body.project_id)?body.project_id:null;
   const scoped=<T>(q:T)=>projectId?(q as any).eq('project_id',projectId):q;
