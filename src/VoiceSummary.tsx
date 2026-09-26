@@ -16,7 +16,7 @@ const STORE='cr3atix_voice_summary_settings_v1';
 const DEFAULTS:SettingsState={visitors:true,newVisitors:true,sessions:true,pageviews:true,events:false,duration:true,topProjects:true,projectBreakdown:false,acquisition:true,health:true,errors:true,performance:false,comparisons:true,activeNow:false,autoSpeak:true,rate:1,pitch:1,voiceName:''};
 const PERIODS:[Period,string][]=[['today',"Aujourd’hui"],['7d','7 jours'],['15d','15 jours'],['30d','30 jours']];
 
-function sum(rows:AnyRow[],key:string){return rows.reduce((a,r)=>a+Number(r[key]||0),0)}
+function sum(rows:AnyRow[]|undefined,key:string){return (rows||[]).reduce((a,r)=>a+Number(r[key]||0),0)}
 function fmt(v:number){return new Intl.NumberFormat('fr-FR').format(Math.round(v||0))}
 function duration(v:number){if(!v)return'0 seconde';if(v<60)return`${Math.round(v)} secondes`;const m=Math.floor(v/60),s=Math.round(v%60);return s?`${m} minutes et ${s} secondes`:`${m} minutes`}
 function pct(current:number,previous:number){if(!previous)return current?100:0;return((current-previous)/previous)*100}

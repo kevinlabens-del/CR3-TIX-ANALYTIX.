@@ -28,9 +28,14 @@ Deno.serve(async req=>{
   const projectId=body.project_id&&/^[0-9a-f-]{36}$/i.test(body.project_id)?body.project_id:null;
   const scoped=<T>(q:T)=>projectId?(q as any).eq('project_id',projectId):q;
   const dayFrom=from.slice(0,10),dayTo=to.slice(0,10);
-  const [projects,daily,dimensions,health,alerts,errors,performance,sessions,events,campaigns]=await Promise.all([
+  const dayMs=86400000,currentStart=new Date(`${dayFrom}T00:00:00.000Z`),currentEnd=new Date(`${dayTo}T00:00:00.000Z`);
+  const dayCount=Math.max(1,Math.round((currentEnd.getTime()-currentStart.getTime())/dayMs)+1);
+  const previousDayToDate=new Date(currentStart.getTime()-dayMs),previousDayFromDate=new Date(previousDayToDate.getTime()-(dayCount-1)*dayMs);
+  const previousDayFrom=previousDayFromDate.toISOString().slice(0,10),previousDayTo=previousDayToDate.toISOString().slice(0,10);
+  const [projects,daily,previousDaily,dimensions,health,alerts,errors,performance,sessions,events,campaigns]=await Promise.all([
     admin.from('analytics_projects').select('*').order('name'),
     scoped(admin.from('analytics_daily_stats').select('*').gte('day',dayFrom).lte('day',dayTo)).order('day').limit(5000),
+    scoped(admin.from('analytics_daily_stats').select('*').gte('day',previousDayFrom).lte('day',previousDayTo)).order('day').limit(5000),
     scoped(admin.from('analytics_daily_dimensions').select('*').gte('day',dayFrom).lte('day',dayTo)).order('events',{ascending:false}).limit(4000),
     scoped(admin.from('analytics_health').select('*')).order('checked_at',{ascending:false}),
     scoped(admin.from('analytics_alerts').select('*').gte('created_at',from).lte('created_at',to)).order('created_at',{ascending:false}).limit(500),
@@ -40,6 +45,6 @@ Deno.serve(async req=>{
     scoped(admin.from('analytics_events').select('id,project_id,event_type,occurred_at,page_path,source,medium,campaign,country_code,device_type,browser,os,properties').gte('occurred_at',from).lte('occurred_at',to)).order('occurred_at',{ascending:false}).limit(2500),
     scoped(admin.from('analytics_campaigns').select('*').gte('day',dayFrom).lte('day',dayTo)).order('sessions',{ascending:false}).limit(1000)
   ]);
-  const failure=[projects,daily,dimensions,health,alerts,errors,performance,sessions,events,campaigns].find(x=>x.error);if(failure?.error)return reply({error:failure.error.message},500,origin);
-  return reply({projects:projects.data||[],daily:daily.data||[],dimensions:dimensions.data||[],health:health.data||[],alerts:alerts.data||[],errors:errors.data||[],performance:performance.data||[],sessions:sessions.data||[],events:events.data||[],campaigns:campaigns.data||[],range:{from,to}},200,origin);
+  const failure=[projects,daily,previousDaily,dimensions,health,alerts,errors,performance,sessions,events,campaigns].find(x=>x.error);if(failure?.error)return reply({error:failure.error.message},500,origin);
+  return reply({projects:projects.data||[],daily:daily.data||[],previous_daily:previousDaily.data||[],dimensions:dimensions.data||[],health:health.data||[],alerts:alerts.data||[],errors:errors.data||[],performance:performance.data||[],sessions:sessions.data||[],events:events.data||[],campaigns:campaigns.data||[],range:{from,to}},200,origin);
 });
